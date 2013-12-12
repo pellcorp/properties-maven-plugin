@@ -64,10 +64,20 @@ public class ReadPropertiesMojo extends AbstractMojo
      */
     private boolean quiet;
 
-
+    /**
+     * If the plugin should be quiet if any of the files was not found
+     *
+     * @parameter default-value="false"
+     */
+    private boolean skip;
+    
     public void execute()
         throws MojoExecutionException
     {
+    	if (skip) {
+    		return;
+    	}
+    	
         Properties projectProperties = new Properties();
         for ( int i = 0; i < files.length; i++ )
         {
