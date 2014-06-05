@@ -22,12 +22,17 @@ package org.codehaus.mojo.properties;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.settings.Profile;
+import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 
 /**
@@ -42,6 +47,8 @@ import org.codehaus.plexus.util.cli.CommandLineUtils;
  */
 public class ReadPropertiesMojo extends AbstractMojo
 {
+	private static final String ACTIVE_PROFILE = "project.activeProfile";
+	
     /**
      * @parameter default-value="${project}"
      * @required
@@ -70,9 +77,13 @@ public class ReadPropertiesMojo extends AbstractMojo
      * @parameter default-value="false"
      */
     private boolean skip;
+
+    /**
+     * @parameter default-value="${settings}", required = true, readonly = true
+     */
+    private Settings settings;
     
-    public void execute()
-        throws MojoExecutionException
+    public void execute() throws MojoExecutionException
     {
     	if (skip) {
     		return;
@@ -82,7 +93,24 @@ public class ReadPropertiesMojo extends AbstractMojo
         for ( int i = 0; i < files.length; i++ )
         {
             File file = files[i];
-
+            
+            if (file.getAbsolutePath().contains("${" + ACTIVE_PROFILE + "}")) 
+            {
+            	getLog().info("Expanding property file: " + file);
+            	
+            	for ( String profileId: settings.getActiveProfiles() )  // this includes the -P profiles specified
+                {
+            		getLog().info("Profile: " + profileId);
+                    File expandedFile = new File(file.getAbsolutePath().replace("${" + ACTIVE_PROFILE + "}", profileId));
+                    
+                    if (expandedFile.exists()) {
+                    	getLog().info("Expanded file path: " + expandedFile);
+                    	file = expandedFile;
+                    	break;
+                    }
+                }
+            }
+            
             if ( file.exists() )
             {
                 try
@@ -106,8 +134,10 @@ public class ReadPropertiesMojo extends AbstractMojo
                 }
                 catch ( IOException e )
                 {
-                    throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
-                }
+                	if ( !quiet ) {
+                		throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
+                	}
+                }	
             }
             else
             {
@@ -145,13 +175,14 @@ public class ReadPropertiesMojo extends AbstractMojo
                 throw new MojoExecutionException( "Error getting system envorinment variables: ", e );
             }
         }
+        
         for ( Enumeration n = projectProperties.propertyNames(); n.hasMoreElements(); )
         {
             String k = (String) n.nextElement();
             projectProperties.setProperty( k, getPropertyValue( k, projectProperties, environment ) );
         }
     }
-
+    	
     /**
      * Retrieves a property value, replacing values like ${token}
      * using the Properties to look them up.
