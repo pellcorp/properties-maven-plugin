@@ -31,7 +31,7 @@
   
   <groupId>org.codehaus.mojo</groupId>
   <artifactId>properties-maven-plugin</artifactId>
-  <version>1.0-alpha-3-pellcorp</version>
+  <version>1.0-alpha-4-pellcorp</version>
   
   <name>Properties Maven Plugin</name>
   <description> 

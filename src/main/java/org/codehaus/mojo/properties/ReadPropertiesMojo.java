@@ -93,62 +93,64 @@ public class ReadPropertiesMojo extends AbstractMojo
         for ( int i = 0; i < files.length; i++ )
         {
             File file = files[i];
-            
-            if (file.getAbsolutePath().contains("${" + ACTIVE_PROFILE + "}")) 
-            {
-            	getLog().info("Expanding property file: " + file);
-            	
-            	for ( String profileId: settings.getActiveProfiles() )  // this includes the -P profiles specified
-                {
-            		getLog().info("Profile: " + profileId);
-                    File expandedFile = new File(file.getAbsolutePath().replace("${" + ACTIVE_PROFILE + "}", profileId));
-                    
-                    if (expandedFile.exists()) {
-                    	getLog().info("Expanded file path: " + expandedFile);
-                    	file = expandedFile;
-                    	break;
-                    }
-                }
-            }
-            
-            if ( file.exists() )
-            {
-                try
-                {
-                    getLog().debug( "Loading property file: " + file );
-                    
-                    FileInputStream stream = new FileInputStream( file );
-                    projectProperties = project.getProperties();
-                    
-                    try
-                    {
-                        projectProperties.load( stream );
-                    }
-                    finally
-                    {
-                        if ( stream != null )
-                        {
-                            stream.close();
-                        }
-                    }
-                }
-                catch ( IOException e )
-                {
-                	if ( !quiet ) {
-                		throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
-                	}
-                }	
-            }
-            else
-            {
-                if ( quiet )
-                {
-                    getLog().warn( "Ignoring missing properties file: " + file.getAbsolutePath() );
-                }
-                else
-                {
-                    throw new MojoExecutionException( "Properties file not found: " + file.getAbsolutePath() );
-                }
+            // if a file is a undefined system property it will be null, ignore this.
+            if (file != null) {
+	            if (file != null && file.getAbsolutePath().contains("${" + ACTIVE_PROFILE + "}")) 
+	            {
+	            	getLog().info("Expanding property file: " + file);
+	            	
+	            	for ( String profileId: settings.getActiveProfiles() )  // this includes the -P profiles specified
+	                {
+	            		getLog().info("Profile: " + profileId);
+	                    File expandedFile = new File(file.getAbsolutePath().replace("${" + ACTIVE_PROFILE + "}", profileId));
+	                    
+	                    if (expandedFile.exists()) {
+	                    	getLog().info("Expanded file path: " + expandedFile);
+	                    	file = expandedFile;
+	                    	break;
+	                    }
+	                }
+	            }
+	            
+	            if ( file.exists() )
+	            {
+	                try
+	                {
+	                    getLog().debug( "Loading property file: " + file );
+	                    
+	                    FileInputStream stream = new FileInputStream( file );
+	                    projectProperties = project.getProperties();
+	                    
+	                    try
+	                    {
+	                        projectProperties.load( stream );
+	                    }
+	                    finally
+	                    {
+	                        if ( stream != null )
+	                        {
+	                            stream.close();
+	                        }
+	                    }
+	                }
+	                catch ( IOException e )
+	                {
+	                	if ( !quiet ) {
+	                		throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
+	                	}
+	                }	
+	            }
+	            else
+	            {
+	                if ( quiet )
+	                {
+	                    getLog().warn( "Ignoring missing properties file: " + file.getAbsolutePath() );
+	                }
+	                else
+	                {
+	                    throw new MojoExecutionException( "Properties file not found: " + file.getAbsolutePath() );
+	                }
+	            }
             }
         }
 
