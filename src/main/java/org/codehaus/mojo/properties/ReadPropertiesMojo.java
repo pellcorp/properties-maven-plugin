@@ -89,71 +89,35 @@ public class ReadPropertiesMojo extends AbstractMojo
     		return;
     	}
     	
-        Properties projectProperties = new Properties();
+        Properties projectProperties = project.getProperties();
         for ( int i = 0; i < files.length; i++ )
         {
             File file = files[i];
+
             // if a file is a undefined system property it will be null, ignore this.
             if (file != null) {
 	            if (file != null && file.getAbsolutePath().contains("${" + ACTIVE_PROFILE + "}")) 
 	            {
-	            	getLog().info("Expanding property file: " + file);
+	            	getLog().debug("Expanding property file: " + file);
 	            	
 	            	for ( String profileId: settings.getActiveProfiles() )  // this includes the -P profiles specified
 	                {
-	            		getLog().info("Profile: " + profileId);
+	            		getLog().debug("Profile: " + profileId);
+
 	                    File expandedFile = new File(file.getAbsolutePath().replace("${" + ACTIVE_PROFILE + "}", profileId));
 	                    
 	                    if (expandedFile.exists()) {
-	                    	getLog().info("Expanded file path: " + expandedFile);
-	                    	file = expandedFile;
-	                    	break;
+	                    	getLog().debug("Expanded file path: " + expandedFile);
+	                    	
+	                    	loadFileProperties(expandedFile, projectProperties);
 	                    }
 	                }
-	            }
-	            
-	            if ( file.exists() )
-	            {
-	                try
-	                {
-	                    getLog().debug( "Loading property file: " + file );
-	                    
-	                    FileInputStream stream = new FileInputStream( file );
-	                    projectProperties = project.getProperties();
-	                    
-	                    try
-	                    {
-	                        projectProperties.load( stream );
-	                    }
-	                    finally
-	                    {
-	                        if ( stream != null )
-	                        {
-	                            stream.close();
-	                        }
-	                    }
-	                }
-	                catch ( IOException e )
-	                {
-	                	if ( !quiet ) {
-	                		throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
-	                	}
-	                }	
-	            }
-	            else
-	            {
-	                if ( quiet )
-	                {
-	                    getLog().warn( "Ignoring missing properties file: " + file.getAbsolutePath() );
-	                }
-	                else
-	                {
-	                    throw new MojoExecutionException( "Properties file not found: " + file.getAbsolutePath() );
-	                }
+	            } else {
+	            	loadFileProperties(file, projectProperties);
 	            }
             }
         }
-
+        
         boolean useEnvVariables = false;
         for ( Enumeration n = projectProperties.propertyNames(); n.hasMoreElements(); )
         {
@@ -174,7 +138,7 @@ public class ReadPropertiesMojo extends AbstractMojo
             }
             catch ( IOException e )
             {
-                throw new MojoExecutionException( "Error getting system envorinment variables: ", e );
+                throw new MojoExecutionException( "Error getting system environment variables: ", e );
             }
         }
         
@@ -184,6 +148,49 @@ public class ReadPropertiesMojo extends AbstractMojo
             projectProperties.setProperty( k, getPropertyValue( k, projectProperties, environment ) );
         }
     }
+
+	private void loadFileProperties(File file, Properties projectProperties) throws MojoExecutionException {
+		if ( file.exists() )
+		{
+		    try
+		    {
+		        getLog().info("Loading property file: " + file);
+		        
+		        FileInputStream stream = new FileInputStream( file );
+		        
+		        Properties fileProperties = new Properties();
+		        try
+		        {
+		        	fileProperties.load( stream );
+		        	project.getProperties().putAll(fileProperties);
+		        }
+		        finally
+		        {
+		            if ( stream != null )
+		            {
+		                stream.close();
+		            }
+		        }
+		    }
+		    catch ( IOException e )
+		    {
+		    	if ( !quiet ) {
+		    		throw new MojoExecutionException( "Error reading properties file " + file.getAbsolutePath(), e );
+		    	}
+		    }	
+		}
+		else
+		{
+		    if ( quiet )
+		    {
+		        getLog().warn( "Ignoring missing properties file: " + file.getAbsolutePath() );
+		    }
+		    else
+		    {
+		        throw new MojoExecutionException( "Properties file not found: " + file.getAbsolutePath() );
+		    }
+		}
+	}
     	
     /**
      * Retrieves a property value, replacing values like ${token}
